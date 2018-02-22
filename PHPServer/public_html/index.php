@@ -1,14 +1,18 @@
 <?php
 require_once 'firebaseLib.php';
+
 // Firebase URL
 //$url = 'https://post-3fd40.firebaseio.com/';
 $url = 'https://lockingsystem-910cf.firebaseio.com/';
 
 //Token from Firebase 
-//$token = 'nSngauEAIRXfRGHLmLC1aUFDUkILaKKJnixMjOI0';
-$token = 'HaAVPxptpAet5QMm8Mkb0wFxbGygzFAspmuKRcSK'; 
+//$token = 'HnsZcCwTpmUv0DVX1Ap9qdWn36WV7lndYYNcYsV4'; //anon
+
+$token = 'HaAVPxptpAet5QMm8Mkb0wFxbGygzFAspmuKRcSK'; //
 
 //Parameters from the http GET
+$myObj = new stdClass();
+
 $myObj->ID = $_GET['ID'];
 $myObj->Bat = $_GET['Bat'];
 $myObj->Lon =  $_GET['Lon'];
@@ -21,11 +25,17 @@ $firebasePath = '/Locks/' . $myObj ->ID  . "/";
 
 //Making calls
 $fb = new fireBase($url, $token);
-$response = $fb->update($firebasePath, $myObj);
 
-//Log who has connected 
+$getData = $fb->get($firebasePath);
+print "This is what we know: <br>";
+print $getData; 
+
+
+$response = $fb->update($firebasePath, $myObj);
+//$response = $fb->push($firebasePath, $myObj);
+
+//Log who is connecting 
 $line = date('Y-m-d H:i:s') . " - $_SERVER[REMOTE_ADDR]";
 file_put_contents('../tmp/visitors.log', $line . PHP_EOL, FILE_APPEND);
-
-sleep(2);
+//sleep(2);
 ?>
