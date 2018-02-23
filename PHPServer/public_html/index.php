@@ -36,9 +36,7 @@ if(!empty($decodedResponse->{'Stat'})){
     } 
 }
 
-
 $response = $fb->update($firebasePath, $myObj);
-//$response = $fb->push($firebasePath, $myObj);
 
 //Log who is connecting 
 $line = date('Y-m-d H:i:s') . " - $_SERVER[REMOTE_ADDR]";
