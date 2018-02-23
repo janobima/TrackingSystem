@@ -2,13 +2,12 @@
 require_once 'firebaseLib.php';
 
 // Firebase URL
-//$url = 'https://post-3fd40.firebaseio.com/';
-$url = 'https://lockingsystem-910cf.firebaseio.com/';
+$url = 'https://post-3fd40.firebaseio.com/';  //anon
+//$url = 'https://lockingsystem-910cf.firebaseio.com/';
 
 //Token from Firebase 
-//$token = 'HnsZcCwTpmUv0DVX1Ap9qdWn36WV7lndYYNcYsV4'; //anon
-
-$token = 'HaAVPxptpAet5QMm8Mkb0wFxbGygzFAspmuKRcSK'; //
+$token = 'HnsZcCwTpmUv0DVX1Ap9qdWn36WV7lndYYNcYsV4'; //anon
+//$token = 'HaAVPxptpAet5QMm8Mkb0wFxbGygzFAspmuKRcSK'; //
 
 //Parameters from the http GET
 $myObj = new stdClass();
@@ -27,8 +26,15 @@ $firebasePath = '/Locks/' . $myObj ->ID  . "/";
 $fb = new fireBase($url, $token);
 
 $getData = $fb->get($firebasePath);
-print "This is what we know: <br>";
 print $getData; 
+
+$decodedResponse = json_decode($getData);
+
+if(!empty($decodedResponse->{'Stat'})){
+    if (($myObj->Stat != $decodedResponse->{'Stat'}) ) {
+        $myObj->Stat = $decodedResponse->{'Stat'}; 
+    } 
+}
 
 
 $response = $fb->update($firebasePath, $myObj);
