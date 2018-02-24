@@ -1,4 +1,4 @@
-// Libraries
+#include <ArduinoJson.h>
 #include "Adafruit_FONA.h"
 #include <SoftwareSerial.h>
 
@@ -6,9 +6,13 @@
 #define FONA_RX 2
 #define FONA_TX 3
 #define FONA_RST 4
+const int solenoidPin =9; 
+const int wirePin = 8;     // the number of the pushbutton pin
 
 // Buffer
-char replybuffer[255];
+int lockStatus ;
+int tampStatus = 0;  // 0= no tampering 1= tampering
+
 
 // Instances
 SoftwareSerial fonaSS = SoftwareSerial(FONA_TX, FONA_RX);
@@ -20,6 +24,10 @@ uint8_t type;
 
 
 void setup() {
+  //Init Solenoid
+  pinMode(solenoidPin, OUTPUT);
+   pinMode(wirePin, INPUT);
+   
   // Initi serial
   while (!Serial);
   Serial.begin(115200);
@@ -45,10 +53,6 @@ void setup() {
   // Print module IMEI number.
   char imei[15] = {0}; // MUST use a 16 character buffer for IMEI!
   uint8_t imeiLen = fona.getIMEI(imei);
-  if (imeiLen > 0) {
-    Serial.print("Module IMEI: ");
-    //Serial.println(imei);
-  }
   
   // Setup GPRS settings
   fona.setGPRSNetworkSettings(F("wholesale"));
@@ -67,7 +71,7 @@ void setup() {
 
 void loop() {
   // Measure data
-  float GSMlatitude, GSMlongitude, speed_kph, heading, speed_mph, altitude, GPSlongitude, GPSlatitude;
+  float GSMlatitude, GSMlongitude, speed_kph, heading, altitude, GPSlongitude, GPSlatitude;
 
   char imei[15] = {0}; 
   uint8_t imeiLen = fona.getIMEI(imei);
@@ -97,13 +101,20 @@ void loop() {
       Serial.print("GSMLoc long:");
       Serial.println(GSMlongitude,6);
 
-      // Prepare request
+      //==== Variables 
       uint16_t statuscode;
       int16_t length;
-      int lockStatus = 0 ; // 0= unlocked 1= locked
-      int tampStatus = 0;  // 0= no tampering 1= tampering
-      String url = "anon809.000webhostapp.com/index.php?ID=";
-     
+      //int lockStatus = 0 ; // 0= unlocked 1= locked
+    
+      String url = "http://locking-system.herokuapp.com/index.php?ID=";
+      char buf[100];
+      int lengthCheck =0;
+      String bufferString; 
+      int breakFlag = 0;
+      int count; 
+      int wireState =0;
+      
+      //==== Prepare request
       String imei2 = imei;
       url += imei2;
       url += "&Bat=";
@@ -113,45 +124,77 @@ void loop() {
       url += "&Lat=";
       url += String(GSMlongitude,7);
       url += "&Stat=";
-      url += lockStatus; // String(lockStatus);
+      url += lockStatus; 
       url += "&Tamp=";
       url += tampStatus ; 
  
-      char buf[90];
       url.toCharArray(buf, url.length()+1);
       Serial.print("Request: ");
       Serial.println(buf);
 
-      // Send location to Dweet.io
-      if (!fona.HTTP_GET_start(buf, &statuscode, (uint16_t *)&length+1)) {
+     // Send location to Dweet.io
+     if (!fona.HTTP_GET_start(buf, &statuscode, (uint16_t *)&length+1)) {
         Serial.println("Failed!");
-      }
+     }
+  
       while (length > 0) {
+        count++;
         while (fona.available()) {
           char c = fona.read();
-// Serial.write is too slow, we'll write directly to Serial register!
-#if defined(__AVR_ATmega328P__) || defined(__AVR_ATmega168__)
-          /* Wait until data register empty. */
-          loop_until_bit_is_set(UCSR0A, UDRE0);
-          UDR0 = c;
-#else
-          Serial.write(c);
-#endif
-          length--;
+          bufferString += c; 
+          Serial.print(c);
+          length--;  
+       }
+      // delay(6);
+       Serial.println(count);   // Might need to include a delay here 
+      if(length == lengthCheck ){
+        lengthCheck++;
+        if(lengthCheck > 2000 || count > 10000  ){
+          fona.HTTP_GET_end();
+          break;
         }
+      } else{
+        lengthCheck = length;
       }
-      fona.HTTP_GET_end();
-      // Send an update every minute
-      delay(60000);
-    } else {
-      Serial.println("GSM location failed...");
-      Serial.println(F("Disabling GPRS"));
-      fona.enableGPRS(false);
-      Serial.println(F("Enabling GPRS"));
-      if (!fona.enableGPRS(true)) {
-        Serial.println(F("Failed to turn GPRS on"));
-      }
+   }
+
+    Serial.println("STRING: \r\n");
+    Serial.println(bufferString);
+    Serial.println("LENGTH: \r\n");
+    Serial.println(bufferString.length());
+    delay(1000);
+
+    DynamicJsonBuffer jsonBuffer;
+    JsonObject& root = jsonBuffer.parseObject(bufferString);
+    lockStatus = root[String("Stat")];
+    Serial.print("STATUS: ");
+    Serial.println(lockStatus);
+
+  // Detecting lock status ------------------------------
+    if(bufferString != ""  ){
+      if(lockStatus==1){
+        Serial.println("LOCK");
+        digitalWrite(solenoidPin,HIGH);
+    }
+    else{
+      Serial.println("UNLOCK");
+      digitalWrite(solenoidPin,LOW);
+    }
+    }
+
+    // Detecting wire cut --------------------------------
+    wireState = digitalRead(wirePin);
+  if (wireState == HIGH) {
+    Serial.println("GOOD");
+    tampStatus = 0; 
+  } else {
+        Serial.println("Cut wire");
+    tampStatus = 1; 
+  }
+    
+    // Send an update every minute
+    fona.HTTP_GET_end();
+    delay(10000);
     }
   }
 }
-
