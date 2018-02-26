@@ -12,7 +12,7 @@ const int wirePin = 8;     // the number of the pushbutton pin
 // Buffer
 int lockStatus ;
 int tampStatus = 0;  // 0= no tampering 1= tampering
-
+float GSMlatitude = 0 , GSMlongitude = 0, speed_kph, heading, altitude, GPSlongitude, GPSlatitude;
 
 // Instances
 SoftwareSerial fonaSS = SoftwareSerial(FONA_TX, FONA_RX);
@@ -71,7 +71,7 @@ void setup() {
 
 void loop() {
   // Measure data
-  float GSMlatitude, GSMlongitude, speed_kph, heading, altitude, GPSlongitude, GPSlatitude;
+  
 
   char imei[15] = {0}; 
   uint8_t imeiLen = fona.getIMEI(imei);
@@ -91,7 +91,7 @@ void loop() {
   }
 
   // Connection Based 
-  Serial.println(F("Checking for Cell network..."));
+ /* Serial.println(F("Checking for Cell network..."));
   if (fona.getNetworkStatus() == 1) {
     // network & GPRS? Great! Print out the GSM location to compare
     boolean gsmloc_success = fona.getGSMLoc(&GSMlatitude, &GSMlongitude);
@@ -100,7 +100,7 @@ void loop() {
       Serial.println(GSMlatitude,6);
       Serial.print("GSMLoc long:");
       Serial.println(GSMlongitude,6);
-
+*/
       //==== Variables 
       uint16_t statuscode;
       int16_t length;
@@ -120,9 +120,9 @@ void loop() {
       url += "&Bat=";
       url += String(vbat); 
       url += "&Lon=";
-      url += String(GSMlatitude,7);
+      url += String(GPSlongitude,7);//String(GSMlongitude,7);
       url += "&Lat=";
-      url += String(GSMlongitude,7);
+      url += String(GPSlatitude,7);//String(GSMlatitude,7);
       url += "&Stat=";
       url += lockStatus; 
       url += "&Tamp=";
@@ -196,5 +196,5 @@ void loop() {
     fona.HTTP_GET_end();
     delay(10000);
     }
-  }
-}
+ // }
+//}
