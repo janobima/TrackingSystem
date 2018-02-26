@@ -10,7 +10,8 @@ const int solenoidPin =9;
 const int wirePin = 8;     // the number of the pushbutton pin
 
 // Buffer
-int lockStatus ;
+int lockStatus = 0 ;
+int wireState =0;
 int tampStatus = 0;  // 0= no tampering 1= tampering
 float GSMlatitude = 0 , GSMlongitude = 0, speed_kph, heading, altitude, GPSlongitude, GPSlatitude;
 
@@ -112,7 +113,6 @@ void loop() {
       String bufferString; 
       int breakFlag = 0;
       int count; 
-      int wireState =0;
       
       //==== Prepare request
       String imei2 = imei;
@@ -194,7 +194,7 @@ void loop() {
     
     // Send an update every minute
     fona.HTTP_GET_end();
-    delay(10000);
+    delay(1000);
     }
  // }
 //}
